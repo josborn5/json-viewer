@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<style>
+		.json {
+			padding: 5px;
+		}
+
+		.json:hover {
+			border: 1px solid #000000;
+		}
+
+		.key {
+			padding-left: 20px;
+		}
+	</style>
+</head>
+<body>
+	<textarea id="input">{ "one": "two" }
+	</textarea>
+	<button onclick="go();">Go</button>
+	<div id="root"></div>
+</body>
+<script>
+"use strict";
+
+const rootElement = document.getElementById("root");
+const inputElement = document.getElementById("input");
+
+function renderJson(value, parentElement) {
+	const valueType = typeof value;
+	const isUndefined = valueType === "undefined";
+	const isNull = value === null;
+
+	function getElement(tagName, content) {
+		const divElement = document.createElement(tagName);
+		divElement.textContent = content;
+		return divElement;
+	}
+
+	function getDivElement(content) { return getElement("div", content); }
+
+	function getSpanElement(content) { return getElement("span", content); }
+
+	function getStringDisplayValue(value) { return "\"" + value + "\""; }
+
+	let valueElement;
+	if (!isUndefined) {
+		switch (valueType) {
+			case "string":
+			case "number":
+			case "boolean":
+				const displayValue = (valueType === "string") ? getStringDisplayValue(value): value;
+				valueElement = getSpanElement(displayValue);
+				break;
+			case "object":
+				if (isNull) {
+					valueElement = getSpanElement("null");
+				} else {
+					valueElement = document.createElement("div");
+					const isArray = Array.isArray(value);
+					const openingChar = (isArray) ? "[" : "{";
+					const closingChar = (isArray) ? "]" : "}";
+					const childElements = [];
+					childElements.push(getDivElement(openingChar));
+
+					const objectKeys = Object.keys(value);
+					const lastKeyIndex = objectKeys.length - 1;
+					objectKeys.forEach(function createKey(keyName, keyIndex) {
+						const keyElement = document.createElement("div");
+						if (!isArray) {
+							keyElement.appendChild(getSpanElement(getStringDisplayValue(keyName)));
+							keyElement.appendChild(getSpanElement(":"));
+						}
+						keyElement.className = "key";
+
+						renderJson(value[keyName], keyElement);
+
+						if (keyIndex < lastKeyIndex) {
+							keyElement.appendChild(getSpanElement(","));
+						}
+
+						childElements.push(keyElement);
+					});
+
+					childElements.push(getDivElement(closingChar));
+
+					childElements.forEach(function append(childElement) {
+						valueElement.appendChild(childElement);
+					});
+				}
+				break;
+		}
+	}
+
+	valueElement.className = "json";
+	parentElement.appendChild(valueElement);
+}
+
+function go() {
+	while (rootElement.lastChild) {
+		rootElement.removeChild(rootElement.lastChild)
+	}
+
+	const inputJsonString = inputElement.value.trim();
+	const inputJsonObject = JSON.parse(inputJsonString);
+	renderJson(inputJsonObject, rootElement);
+}
+
+</script>
+</html>
