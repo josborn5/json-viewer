@@ -16,9 +16,15 @@
 	</style>
 </head>
 <body>
-	<textarea id="input">{ "one": "two" }
-	</textarea>
-	<button onclick="go();">Go</button>
+	<div>
+		<span>
+			<textarea id="input">{ "one": "two" }
+			</textarea>
+			<button onclick="go();">Go</button>
+		</span>
+		<span id="selected-value"></span>
+		</div>
+	</div>
 	<div id="root"></div>
 </body>
 <script>
@@ -26,6 +32,9 @@
 
 const rootElement = document.getElementById("root");
 const inputElement = document.getElementById("input");
+const selectedValueElement = document.getElementById("selected-value");
+
+const valueMap = new Map();
 
 function renderJson(value, parentElement) {
 	const valueType = typeof value;
@@ -94,17 +103,31 @@ function renderJson(value, parentElement) {
 	}
 
 	valueElement.className = "json";
+
+	valueMap.set(valueElement, value);
+	valueElement.addEventListener("click", clickHandler);
+
 	parentElement.appendChild(valueElement);
 }
 
 function go() {
+	// clean
+	valueMap.clear();
 	while (rootElement.lastChild) {
 		rootElement.removeChild(rootElement.lastChild)
 	}
 
+	// build new
 	const inputJsonString = inputElement.value.trim();
 	const inputJsonObject = JSON.parse(inputJsonString);
 	renderJson(inputJsonObject, rootElement);
+}
+
+function clickHandler(event) {
+	event.stopPropagation();
+	const value = valueMap.get(event.target);
+
+	selectedValueElement.textContent = JSON.stringify(value);
 }
 
 </script>
