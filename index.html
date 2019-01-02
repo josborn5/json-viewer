@@ -2,6 +2,9 @@
 <html>
 <head>
 	<style>
+		span {
+			font-family: 'Courier New', Courier, monospace;
+		}
 		.json {
 			padding: 5px;
 		}
@@ -13,30 +16,56 @@
 		.key {
 			padding-left: 20px;
 		}
+
+		.left {
+			float: left;
+		}
+
+		.right {
+			float: right;
+		}
+
+		.column {
+			width: 50%;
+			max-width: 50%;
+			height: 300px;
+			resize: both;
+			overflow: scroll;
+		}
 	</style>
 </head>
 <body>
 	<div>
+		<h1>Input</h1>
 		<span>
-			<textarea id="input">{ "one": "two" }
+			<textarea id="input">{ "one": { "two": "three" } }
 			</textarea>
 			<button onclick="go();">Go</button>
 		</span>
-		<span id="selected-value"></span>
+	</div>
+	<div>
+		<div class="left column">
+			<h1>Viewer</h1>
+			<p>Click on a value to edit it in the Editor</p>
+			<div id="root" class="viewer"></div>
+		</div>
+		<div class="right column">
+			<h1>Editor</h1>
+			<textarea id="editor" class="editor"></textarea>
+			<button onclick="update();">Update</button>
 		</div>
 	</div>
-	<div id="root"></div>
 </body>
 <script>
 "use strict";
 
 const rootElement = document.getElementById("root");
 const inputElement = document.getElementById("input");
-const selectedValueElement = document.getElementById("selected-value");
+const editorElement = document.getElementById("editor");
 
 const valueMap = new Map();
 
-function renderJson(value, parentElement) {
+function renderJson(value, parentElement, parentObject, parentObjectKeyName) {
 	const valueType = typeof value;
 	const isUndefined = valueType === "undefined";
 	const isNull = value === null;
@@ -83,7 +112,7 @@ function renderJson(value, parentElement) {
 						}
 						keyElement.className = "key";
 
-						renderJson(value[keyName], keyElement);
+						renderJson(value[keyName], keyElement, value, keyName);
 
 						if (keyIndex < lastKeyIndex) {
 							keyElement.appendChild(getSpanElement(","));
@@ -104,7 +133,11 @@ function renderJson(value, parentElement) {
 
 	valueElement.className = "json";
 
-	valueMap.set(valueElement, value);
+	valueMap.set(valueElement, {
+		parent: parentObject,
+		parentKey: parentObjectKeyName,
+		value: value
+	});
 	valueElement.addEventListener("click", clickHandler);
 
 	parentElement.appendChild(valueElement);
@@ -119,15 +152,36 @@ function go() {
 
 	// build new
 	const inputJsonString = inputElement.value.trim();
-	const inputJsonObject = JSON.parse(inputJsonString);
-	renderJson(inputJsonObject, rootElement);
+	workingValue = JSON.parse(inputJsonString);
+
+	renderJson(workingValue, rootElement);
 }
+
+function update() {
+	const newValue = JSON.parse(editorElement.value);
+
+	if (selectedParent && selectedParentKeyName) {
+		selectedParent[selectedParentKeyName] = newValue;
+	} else {
+		workingValue = newValue;
+	}
+
+	inputElement.value = JSON.stringify(workingValue, null, 2);
+	go();
+}
+
+let workingValue = null;
+let selectedParent = null;
+let selectedParentKeyName = null;
 
 function clickHandler(event) {
 	event.stopPropagation();
-	const value = valueMap.get(event.target);
+	const record = valueMap.get(event.currentTarget);
 
-	selectedValueElement.textContent = JSON.stringify(value);
+	selectedParent = record.parent;
+	selectedParentKeyName = record.parentKey;
+
+	editorElement.value = JSON.stringify(record.value, null, 2);
 }
 
 </script>
