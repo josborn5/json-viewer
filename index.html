@@ -2,7 +2,7 @@
 <html>
 <head>
 	<style>
-		span {
+		div, textarea {
 			font-family: 'Courier New', Courier, monospace;
 		}
 		.json {
@@ -16,173 +16,179 @@
 		.key {
 			padding-left: 20px;
 		}
-
-		.left {
-			float: left;
-		}
-
-		.right {
-			float: right;
-		}
-
-		.column {
-			width: 50%;
-			max-width: 50%;
-			height: 300px;
-			resize: both;
-			overflow: scroll;
-		}
 	</style>
 </head>
 <body>
-	<div>
-		<h1>Input</h1>
-		<span>
-			<textarea id="input">{ "one": { "two": "three" } }
-			</textarea>
-			<button onclick="go();">Go</button>
-		</span>
-	</div>
-	<div>
-		<div class="left column">
-			<h1>Viewer</h1>
-			<p>Click on a value to edit it in the Editor</p>
-			<div id="root" class="viewer"></div>
-		</div>
-		<div class="right column">
-			<h1>Editor</h1>
-			<textarea id="editor" class="editor"></textarea>
-			<button onclick="update();">Update</button>
-		</div>
-	</div>
+	<h1>Input</h1>
+	<textarea id="input">{ "one": { "two": "three" } }</textarea>
+	<button onclick="go();">Go</button>
+	<h1>Viewer</h1>
+	<div id="root"></div>
 </body>
 <script>
 "use strict";
 
 const rootElement = document.getElementById("root");
 const inputElement = document.getElementById("input");
-const editorElement = document.getElementById("editor");
 
-const valueMap = new Map();
+function JsonViewer(inputElement) {
 
-function renderJson(value, parentElement, parentObject, parentObjectKeyName) {
-	const valueType = typeof value;
-	const isUndefined = valueType === "undefined";
-	const isNull = value === null;
+	const valueMap = new Map();
+	let workingValue = null;
+	let selectedParent = null;
+	let selectedParentKeyName = null;
 
-	function getElement(tagName, content) {
-		const divElement = document.createElement(tagName);
-		divElement.textContent = content;
-		return divElement;
-	}
+	const rootElement = document.createElement("div");
+	const editContainer = document.createElement("div");
+	const editorElement = document.createElement("textarea");
+	const updateButton = document.createElement("button");
+	editContainer.appendChild(editorElement);
+	editContainer.appendChild(updateButton);
+	inputElement.appendChild(rootElement);
+	inputElement.appendChild(editContainer);
 
-	function getDivElement(content) { return getElement("div", content); }
+	updateButton.addEventListener("click", update);
+	updateButton.textContent = "Update";
+	updateButton.disabled = true;
 
-	function getSpanElement(content) { return getElement("span", content); }
+	function renderJson(value, parentElement, parentObject, parentObjectKeyName) {
+		const valueType = typeof value;
+		const isUndefined = valueType === "undefined";
+		const isNull = value === null;
 
-	function getStringDisplayValue(value) { return "\"" + value + "\""; }
-
-	let valueElement;
-	if (!isUndefined) {
-		switch (valueType) {
-			case "string":
-			case "number":
-			case "boolean":
-				const displayValue = (valueType === "string") ? getStringDisplayValue(value): value;
-				valueElement = getSpanElement(displayValue);
-				break;
-			case "object":
-				if (isNull) {
-					valueElement = getSpanElement("null");
-				} else {
-					valueElement = document.createElement("div");
-					const isArray = Array.isArray(value);
-					const openingChar = (isArray) ? "[" : "{";
-					const closingChar = (isArray) ? "]" : "}";
-					const childElements = [];
-					childElements.push(getDivElement(openingChar));
-
-					const objectKeys = Object.keys(value);
-					const lastKeyIndex = objectKeys.length - 1;
-					objectKeys.forEach(function createKey(keyName, keyIndex) {
-						const keyElement = document.createElement("div");
-						if (!isArray) {
-							keyElement.appendChild(getSpanElement(getStringDisplayValue(keyName)));
-							keyElement.appendChild(getSpanElement(":"));
-						}
-						keyElement.className = "key";
-
-						renderJson(value[keyName], keyElement, value, keyName);
-
-						if (keyIndex < lastKeyIndex) {
-							keyElement.appendChild(getSpanElement(","));
-						}
-
-						childElements.push(keyElement);
-					});
-
-					childElements.push(getDivElement(closingChar));
-
-					childElements.forEach(function append(childElement) {
-						valueElement.appendChild(childElement);
-					});
-				}
-				break;
+		function getElement(tagName, content) {
+			const divElement = document.createElement(tagName);
+			divElement.textContent = content;
+			return divElement;
 		}
+
+		function getDivElement(content) { return getElement("div", content); }
+
+		function getSpanElement(content) { return getElement("span", content); }
+
+		function getStringDisplayValue(value) { return "\"" + value + "\""; }
+
+		let valueElement;
+		if (!isUndefined) {
+			switch (valueType) {
+				case "string":
+				case "number":
+				case "boolean":
+					const displayValue = (valueType === "string") ? getStringDisplayValue(value): value;
+					valueElement = getSpanElement(displayValue);
+					break;
+				case "object":
+					if (isNull) {
+						valueElement = getSpanElement("null");
+					} else {
+						valueElement = document.createElement("div");
+						const isArray = Array.isArray(value);
+						const openingChar = (isArray) ? "[" : "{";
+						const closingChar = (isArray) ? "]" : "}";
+						const childElements = [];
+						childElements.push(getDivElement(openingChar));
+
+						const objectKeys = Object.keys(value);
+						const lastKeyIndex = objectKeys.length - 1;
+						objectKeys.forEach(function createKey(keyName, keyIndex) {
+							const keyElement = document.createElement("div");
+							if (!isArray) {
+								keyElement.appendChild(getSpanElement(getStringDisplayValue(keyName)));
+								keyElement.appendChild(getSpanElement(":"));
+							}
+							keyElement.className = "key";
+
+							renderJson(value[keyName], keyElement, value, keyName);
+
+							if (keyIndex < lastKeyIndex) {
+								keyElement.appendChild(getSpanElement(","));
+							}
+
+							childElements.push(keyElement);
+						});
+
+						childElements.push(getDivElement(closingChar));
+
+						childElements.forEach(function append(childElement) {
+							valueElement.appendChild(childElement);
+						});
+					}
+					break;
+			}
+		}
+
+		valueMap.set(valueElement, {
+			parent: parentObject,
+			parentKey: parentObjectKeyName,
+			value: value
+		});
+		valueElement.className = "json";
+		valueElement.addEventListener("click", clickHandler);
+
+		parentElement.appendChild(valueElement);
 	}
 
-	valueElement.className = "json";
+	function clickHandler(event) {
+		event.stopPropagation();
+		const record = valueMap.get(event.currentTarget);
 
-	valueMap.set(valueElement, {
-		parent: parentObject,
-		parentKey: parentObjectKeyName,
-		value: value
-	});
-	valueElement.addEventListener("click", clickHandler);
+		selectedParent = record.parent;
+		selectedParentKeyName = record.parentKey;
 
-	parentElement.appendChild(valueElement);
+		editorElement.value = JSON.stringify(record.value, null, 2);
+		updateButton.disabled = false;
+	}
+
+	function set(newValue) {
+		workingValue = newValue;
+		// clean
+		valueMap.clear();
+		while (rootElement.lastChild) {
+			rootElement.removeChild(rootElement.lastChild)
+		}
+
+		// build new
+		renderJson(workingValue, rootElement);
+	}
+
+	function get() {
+		return JSON.parse(JSON.stringify(workingValue));
+	}
+
+	function update() {
+		const newValue = JSON.parse(editorElement.value);
+
+		if (selectedParent && selectedParentKeyName) {
+			selectedParent[selectedParentKeyName] = newValue;
+		} else {
+			workingValue = newValue;
+		}
+
+		set(workingValue);
+
+		const updatedEvent = new Event("updated");
+		inputElement.dispatchEvent(updatedEvent);
+	}
+
+	return {
+		set: set,
+		get: get
+	};
 }
+
+const jsonViewer = JsonViewer(rootElement);
 
 function go() {
-	// clean
-	valueMap.clear();
-	while (rootElement.lastChild) {
-		rootElement.removeChild(rootElement.lastChild)
-	}
-
-	// build new
 	const inputJsonString = inputElement.value.trim();
-	workingValue = JSON.parse(inputJsonString);
+	const workingValue = JSON.parse(inputJsonString);
 
-	renderJson(workingValue, rootElement);
+	jsonViewer.set(workingValue);
 }
 
-function update() {
-	const newValue = JSON.parse(editorElement.value);
-
-	if (selectedParent && selectedParentKeyName) {
-		selectedParent[selectedParentKeyName] = newValue;
-	} else {
-		workingValue = newValue;
-	}
-
-	inputElement.value = JSON.stringify(workingValue, null, 2);
-	go();
-}
-
-let workingValue = null;
-let selectedParent = null;
-let selectedParentKeyName = null;
-
-function clickHandler(event) {
-	event.stopPropagation();
-	const record = valueMap.get(event.currentTarget);
-
-	selectedParent = record.parent;
-	selectedParentKeyName = record.parentKey;
-
-	editorElement.value = JSON.stringify(record.value, null, 2);
-}
+rootElement.addEventListener("updated", function updateInputTextArea() {
+	const newValue = jsonViewer.get();
+	inputElement.value = JSON.stringify(newValue, null, 2);
+});
 
 </script>
 </html>
