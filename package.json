@@ -1,0 +1,23 @@
+{
+  "name": "render-json-in-dom",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "serve": "http-server",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/josborn5/json-viewer.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/josborn5/json-viewer/issues"
+  },
+  "homepage": "https://github.com/josborn5/json-viewer#readme",
+  "devDependencies": {
+    "http-server": "^0.11.1"
+  }
+}

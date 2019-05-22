@@ -5,16 +5,25 @@
 		div, textarea {
 			font-family: 'Courier New', Courier, monospace;
 		}
-		.json {
-			padding: 5px;
+		.value {
+			padding-left: 0.5rem;
+			border-width: 1px;
+			border-style: solid;
+			border-color: transparent;
 		}
 
-		.json:hover {
+		.value:hover {
 			border: 1px solid #000000;
 		}
 
+		.string { color: sienna;}
+		.bool { color: blue; }
+		.number { color: purple; }
+
+		.key-value { padding-left: 2rem; }
+
 		.key {
-			padding-left: 20px;
+			color: cyan;
 		}
 	</style>
 </head>
@@ -24,170 +33,28 @@
 	<button onclick="go();">Go</button>
 	<h1>Viewer</h1>
 	<div id="root"></div>
+	<div id="event"></div>
 </body>
+<script src="jsonViewer.js"></script>
 <script>
 "use strict";
 
 const rootElement = document.getElementById("root");
 const inputElement = document.getElementById("input");
+const detailElement = document.getElementById("event");
 
-function JsonViewer(inputElement) {
-
-	const valueMap = new Map();
-	let workingValue = null;
-	let selectedParent = null;
-	let selectedParentKeyName = null;
-
-	const rootElement = document.createElement("div");
-	const editContainer = document.createElement("div");
-	const editorElement = document.createElement("textarea");
-	const updateButton = document.createElement("button");
-	editContainer.appendChild(editorElement);
-	editContainer.appendChild(updateButton);
-	inputElement.appendChild(rootElement);
-	inputElement.appendChild(editContainer);
-
-	updateButton.addEventListener("click", update);
-	updateButton.textContent = "Update";
-	updateButton.disabled = true;
-
-	function renderJson(value, parentElement, parentObject, parentObjectKeyName) {
-		const valueType = typeof value;
-		const isUndefined = valueType === "undefined";
-		const isNull = value === null;
-
-		function getElement(tagName, content) {
-			const divElement = document.createElement(tagName);
-			divElement.textContent = content;
-			return divElement;
-		}
-
-		function getDivElement(content) { return getElement("div", content); }
-
-		function getSpanElement(content) { return getElement("span", content); }
-
-		function getStringDisplayValue(value) { return "\"" + value + "\""; }
-
-		let valueElement;
-		if (!isUndefined) {
-			switch (valueType) {
-				case "string":
-				case "number":
-				case "boolean":
-					const displayValue = (valueType === "string") ? getStringDisplayValue(value): value;
-					valueElement = getSpanElement(displayValue);
-					break;
-				case "object":
-					if (isNull) {
-						valueElement = getSpanElement("null");
-					} else {
-						valueElement = document.createElement("div");
-						const isArray = Array.isArray(value);
-						const openingChar = (isArray) ? "[" : "{";
-						const closingChar = (isArray) ? "]" : "}";
-						const childElements = [];
-						childElements.push(getDivElement(openingChar));
-
-						const objectKeys = Object.keys(value);
-						const lastKeyIndex = objectKeys.length - 1;
-						objectKeys.forEach(function createKey(keyName, keyIndex) {
-							const keyElement = document.createElement("div");
-							if (!isArray) {
-								keyElement.appendChild(getSpanElement(getStringDisplayValue(keyName)));
-								keyElement.appendChild(getSpanElement(":"));
-							}
-							keyElement.className = "key";
-
-							renderJson(value[keyName], keyElement, value, keyName);
-
-							if (keyIndex < lastKeyIndex) {
-								keyElement.appendChild(getSpanElement(","));
-							}
-
-							childElements.push(keyElement);
-						});
-
-						childElements.push(getDivElement(closingChar));
-
-						childElements.forEach(function append(childElement) {
-							valueElement.appendChild(childElement);
-						});
-					}
-					break;
-			}
-		}
-
-		valueMap.set(valueElement, {
-			parent: parentObject,
-			parentKey: parentObjectKeyName,
-			value: value
-		});
-		valueElement.className = "json";
-		valueElement.addEventListener("click", clickHandler);
-
-		parentElement.appendChild(valueElement);
-	}
-
-	function clickHandler(event) {
-		event.stopPropagation();
-		const record = valueMap.get(event.currentTarget);
-
-		selectedParent = record.parent;
-		selectedParentKeyName = record.parentKey;
-
-		editorElement.value = JSON.stringify(record.value, null, 2);
-		updateButton.disabled = false;
-	}
-
-	function set(newValue) {
-		workingValue = newValue;
-		// clean
-		valueMap.clear();
-		while (rootElement.lastChild) {
-			rootElement.removeChild(rootElement.lastChild)
-		}
-
-		// build new
-		renderJson(workingValue, rootElement);
-	}
-
-	function get() {
-		return JSON.parse(JSON.stringify(workingValue));
-	}
-
-	function update() {
-		const newValue = JSON.parse(editorElement.value);
-
-		if (selectedParent && selectedParentKeyName) {
-			selectedParent[selectedParentKeyName] = newValue;
-		} else {
-			workingValue = newValue;
-		}
-
-		set(workingValue);
-
-		const updatedEvent = new Event("updated");
-		inputElement.dispatchEvent(updatedEvent);
-	}
-
-	return {
-		set: set,
-		get: get
-	};
-}
-
-const jsonViewer = JsonViewer(rootElement);
+const viewer = jsonViewer(rootElement);
 
 function go() {
 	const inputJsonString = inputElement.value.trim();
 	const workingValue = JSON.parse(inputJsonString);
-
-	jsonViewer.set(workingValue);
+	viewer.destroy();
+	viewer.render(workingValue);
 }
 
-rootElement.addEventListener("updated", function updateInputTextArea() {
-	const newValue = jsonViewer.get();
-	inputElement.value = JSON.stringify(newValue, null, 2);
+rootElement.addEventListener("json-viewer-click", function logEvent(e) {
+	const eventString = JSON.stringify(e.detail, null, 2);
+	detailElement.textContent = eventString;
 });
 
 </script>
